@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yt-tinker"
+version = "0.1.0"
+description = "A Windows-first personal media downloader."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+  "platformdirs>=4.2",
+  "PySide6>=6.8",
+  "yt-dlp>=2025.1.15",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.13",
+  "pytest>=8.3",
+  "ruff>=0.8",
+  "pyinstaller>=6.11",
+]
+
+[project.scripts]
+yt-tinker = "yt_tinker.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"] # Qt stylesheet declarations are intentionally long strings.
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src"]
+strict = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = ["yt_dlp"]
+ignore_missing_imports = true
