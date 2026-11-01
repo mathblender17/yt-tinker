@@ -6,7 +6,7 @@ from pathlib import Path
 from platformdirs import user_config_path
 
 from yt_tinker.application.settings_service import AppSettings, SettingsRepository
-from yt_tinker.domain.models import DownloadFormat, DownloadMode
+from yt_tinker.domain.models import VideoQuality
 
 
 class JsonSettingsRepository(SettingsRepository):
@@ -20,11 +20,7 @@ class JsonSettingsRepository(SettingsRepository):
                 last_download_directory=Path(raw["last_download_directory"])
                 if raw.get("last_download_directory")
                 else None,
-                preferred_format=DownloadFormat(
-                    raw.get("preferred_format", DownloadFormat.VIDEO_MP4)
-                ),
-                preferred_mode=DownloadMode(raw.get("preferred_mode", DownloadMode.SINGLE)),
-                compact_logs=bool(raw.get("compact_logs", True)),
+                video_quality=VideoQuality(raw.get("video_quality", VideoQuality.STANDARD)),
             )
         except (OSError, ValueError, TypeError, json.JSONDecodeError):
             return AppSettings()
@@ -35,9 +31,7 @@ class JsonSettingsRepository(SettingsRepository):
             "last_download_directory": str(settings.last_download_directory)
             if settings.last_download_directory
             else None,
-            "preferred_format": settings.preferred_format,
-            "preferred_mode": settings.preferred_mode,
-            "compact_logs": settings.compact_logs,
+            "video_quality": settings.video_quality,
         }
         temporary = self.path.with_suffix(".tmp")
         temporary.write_text(json.dumps(payload, indent=2), encoding="utf-8")

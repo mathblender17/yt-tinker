@@ -4,6 +4,7 @@ import json
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
+from threading import Lock
 
 from yt_tinker.domain.models import DownloadFormat, MediaItem
 
@@ -13,27 +14,51 @@ class DownloadArchive:
 
     def __init__(self, path: Path) -> None:
         self._path = path
+        self._lock = Lock()
+        self._entries = dict(_load(path))
 
     def find(
         self, source_id: str, media_format: DownloadFormat, destination: Path
     ) -> MediaItem | None:
-        key = _key(source_id, media_format, destination)
-        return next((item for item, stored_key in self._load() if stored_key == key), None)
+        item = self._entries.get(_key(source_id, media_format, destination))
+        return item if item is not None and item.local_path.exists() else None
 
     def add(self, item: MediaItem, destination: Path) -> None:
-        entries = self._load()
-        entries.append((item, _key_for(item, destination)))
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(
-            json.dumps([_serialize(item, key) for item, key in entries], indent=2), encoding="utf-8"
-        )
+        with self._lock:
+            self._entries[_key_for(item, destination)] = item
+            self._save()
 
-    def _load(self) -> list[tuple[MediaItem, str]]:
-        try:
-            raw = json.loads(self._path.read_text(encoding="utf-8"))
-            return [_deserialize(entry) for entry in raw]
-        except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):
-            return []
+    def remove(self, key: str) -> None:
+        with self._lock:
+            self._entries.pop(key, None)
+            self._save()
+
+    def entries(self) -> list[tuple[str, MediaItem]]:
+        """Most recent first."""
+        with self._lock:
+            pairs = list(self._entries.items())
+        return sorted(pairs, key=lambda pair: pair[1].downloaded_at, reverse=True)
+
+    def source_ids(self) -> set[str]:
+        with self._lock:
+            return {item.source_id for item in self._entries.values()}
+
+    def _save(self) -> None:
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self._path.with_suffix(".tmp")
+        temporary.write_text(
+            json.dumps([_serialize(item, key) for key, item in self._entries.items()], indent=2),
+            encoding="utf-8",
+        )
+        temporary.replace(self._path)
+
+
+def _load(path: Path) -> list[tuple[str, MediaItem]]:
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        return [_deserialize(entry) for entry in raw]
+    except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError):
+        return []
 
 
 def _key(source_id: str, media_format: DownloadFormat, destination: Path) -> str:
@@ -53,7 +78,7 @@ def _serialize(item: MediaItem, key: str) -> dict[str, object]:
     return payload
 
 
-def _deserialize(payload: dict[str, object]) -> tuple[MediaItem, str]:
+def _deserialize(payload: dict[str, object]) -> tuple[str, MediaItem]:
     item = MediaItem(
         source_id=str(payload["source_id"]),
         source_url=str(payload["source_url"]),
@@ -68,7 +93,7 @@ def _deserialize(payload: dict[str, object]) -> tuple[MediaItem, str]:
         playlist_title=_optional_string(payload.get("playlist_title")),
         file_size_bytes=_optional_int(payload.get("file_size_bytes")),
     )
-    return item, str(payload["key"])
+    return str(payload["key"]), item
 
 
 def _optional_string(value: object) -> str | None:

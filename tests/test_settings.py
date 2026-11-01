@@ -1,13 +1,13 @@
 from pathlib import Path
 
 from yt_tinker.application.settings_service import AppSettings
-from yt_tinker.domain.models import DownloadFormat, DownloadMode
+from yt_tinker.domain.models import VideoQuality
 from yt_tinker.infrastructure.settings_json import JsonSettingsRepository
 
 
 def test_settings_round_trip(tmp_path: Path) -> None:
     repository = JsonSettingsRepository(tmp_path / "settings.json")
-    expected = AppSettings(Path("C:/Media"), DownloadFormat.AUDIO_MP3, DownloadMode.PLAYLIST, False)
+    expected = AppSettings(Path("C:/Media"), VideoQuality.MAXIMUM)
     repository.save(expected)
     assert repository.load() == expected
 

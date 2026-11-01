@@ -12,9 +12,9 @@ class DownloadFormat(StrEnum):
     AUDIO_MP3 = "audio_mp3"
 
 
-class DownloadMode(StrEnum):
-    SINGLE = "single"
-    PLAYLIST = "playlist"
+class VideoQuality(StrEnum):
+    STANDARD = "standard"  # H.264/AAC up to 1080p: plays everywhere.
+    MAXIMUM = "maximum"  # Highest resolution offered, whatever the codec.
 
 
 class QueueStatus(StrEnum):
@@ -22,6 +22,7 @@ class QueueStatus(StrEnum):
     PREPARING = "preparing"
     DOWNLOADING = "downloading"
     PROCESSING = "processing"
+    PAUSED = "paused"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
@@ -46,8 +47,11 @@ class DownloadRequest:
     source_url: str
     destination: Path
     media_format: DownloadFormat
-    mode: DownloadMode
     allow_duplicate: bool = False
+    quality: VideoQuality = VideoQuality.STANDARD
+    collection: str | None = None  # Playlist title; its videos share a subfolder.
+    index: int | None = None  # Position in the playlist, used as a filename prefix.
+    connections: int = 16
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,8 +59,6 @@ class DownloadProgress:
     fraction: float = 0.0
     speed_bytes_per_second: float | None = None
     eta_seconds: int | None = None
-    completed_children: int = 0
-    total_children: int | None = None
 
     @property
     def percent(self) -> int:
@@ -99,6 +101,7 @@ class QueueItem:
     id: UUID = field(default_factory=uuid4)
     status: QueueStatus = QueueStatus.QUEUED
     title: str | None = None
+    thumbnail_url: str | None = None
     progress: DownloadProgress = field(default_factory=DownloadProgress)
     error: DownloadError | None = None
     results: list[MediaItem] = field(default_factory=list)

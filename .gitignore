@@ -9,3 +9,7 @@ dist/
 *.spec
 
 src/yt_tinker.egg-info/
+
+# Left in the project root by an older run.
+*.part
+*.ytdl

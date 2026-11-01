@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import importlib.util
+import importlib.metadata
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -15,17 +15,17 @@ class DependencyStatus:
 
 def collect_dependency_status() -> list[DependencyStatus]:
     return [
-        _python_package("yt-dlp", "yt_dlp"),
+        _python_package("yt-dlp"),
         _executable("FFmpeg", "ffmpeg"),
         _javascript_runtime(),
     ]
 
 
-def _python_package(label: str, module: str) -> DependencyStatus:
-    available = importlib.util.find_spec(module) is not None
-    return DependencyStatus(
-        label, available, "Available" if available else "Install the Python package."
-    )
+def _python_package(package: str) -> DependencyStatus:
+    try:
+        return DependencyStatus(package, True, f"Version {importlib.metadata.version(package)}")
+    except importlib.metadata.PackageNotFoundError:
+        return DependencyStatus(package, False, "Install the Python package.")
 
 
 def _executable(label: str, executable: str) -> DependencyStatus:
@@ -34,13 +34,18 @@ def _executable(label: str, executable: str) -> DependencyStatus:
 
 
 def _javascript_runtime() -> DependencyStatus:
-    for executable in ("node", "deno", "bun"):
+    for executable in ("deno", "node", "bun"):
         path = shutil.which(executable)
         if path:
             try:
                 version = (
                     subprocess.run(
-                        [path, "--version"], capture_output=True, text=True, timeout=3, check=False
+                        [path, "--version"],
+                        capture_output=True,
+                        text=True,
+                        timeout=3,
+                        check=False,
+                        creationflags=subprocess.CREATE_NO_WINDOW,
                     )
                     .stdout.strip()
                     .splitlines()[0]

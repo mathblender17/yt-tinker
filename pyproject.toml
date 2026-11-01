@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "yt-tinker"
-version = "0.1.0"
+version = "1.0.0"
 description = "A Windows-first personal media downloader."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -12,7 +12,7 @@ license = { text = "MIT" }
 dependencies = [
   "platformdirs>=4.2",
   "PySide6>=6.8",
-  "yt-dlp>=2025.1.15",
+  "yt-dlp[default]>=2026.8.19",
 ]
 
 [project.optional-dependencies]
@@ -23,11 +23,14 @@ dev = [
   "pyinstaller>=6.11",
 ]
 
-[project.scripts]
+[project.gui-scripts]
 yt-tinker = "yt_tinker.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"yt_tinker.ui" = ["qml/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

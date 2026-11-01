@@ -5,7 +5,6 @@ import pytest
 from yt_tinker.application.queue_manager import InvalidQueueTransitionError, QueueManager
 from yt_tinker.domain.models import (
     DownloadFormat,
-    DownloadMode,
     DownloadProgress,
     DownloadRequest,
     QueueItem,
@@ -19,7 +18,6 @@ def _item() -> QueueItem:
             "https://youtube.com/watch?v=abc",
             Path("C:/Media"),
             DownloadFormat.VIDEO_MP4,
-            DownloadMode.SINGLE,
         )
     )
 
@@ -72,3 +70,29 @@ def test_completed_and_failed_items_remain_in_session_history() -> None:
     assert manager.items == (completed, failed)
     assert completed.status is QueueStatus.COMPLETED
     assert failed.status is QueueStatus.FAILED
+
+
+def test_queue_runs_up_to_the_active_limit_and_frees_a_slot_when_one_stops() -> None:
+    manager = QueueManager(max_active=2)
+    first, second, third = _item(), _item(), _item()
+    for item in (first, second, third):
+        manager.add(item)
+    assert manager.start_next() is first
+    assert manager.start_next() is second
+    assert manager.start_next() is None
+    manager.transition(first.id, QueueStatus.PAUSED)
+    assert manager.start_next() is third
+    assert manager.active_items == [second, third]
+
+
+def test_paused_failed_and_cancelled_items_can_go_back_in_the_queue() -> None:
+    manager = QueueManager()
+    item = _item()
+    manager.add(item)
+    manager.start_next()
+    manager.transition(item.id, QueueStatus.PAUSED)
+    manager.transition(item.id, QueueStatus.QUEUED)
+    manager.start_next()
+    manager.transition(item.id, QueueStatus.FAILED)
+    manager.transition(item.id, QueueStatus.QUEUED)
+    assert manager.start_next() is item

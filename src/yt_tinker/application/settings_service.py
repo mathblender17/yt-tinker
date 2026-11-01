@@ -4,15 +4,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from yt_tinker.domain.models import DownloadFormat, DownloadMode
+from yt_tinker.domain.models import VideoQuality
 
 
 @dataclass(frozen=True, slots=True)
 class AppSettings:
     last_download_directory: Path | None = None
-    preferred_format: DownloadFormat = DownloadFormat.VIDEO_MP4
-    preferred_mode: DownloadMode = DownloadMode.SINGLE
-    compact_logs: bool = True
+    video_quality: VideoQuality = VideoQuality.STANDARD
 
 
 class SettingsRepository(Protocol):
